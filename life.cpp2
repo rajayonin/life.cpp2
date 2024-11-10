@@ -1,0 +1,113 @@
+
+WIDTH: const i8 = 10;
+HEIGHT: const i8 = 10;
+
+
+print_board: (in b: std::vector<std::vector<bool>>, in bbox: bool = true) = {
+    num_alive: i16 = 0;
+
+    if bbox {
+        for 0..<(2*WIDTH)+2 do (_) { std::cout << '-'; }
+        std::cout << '\n';
+    }
+
+    for b do (in col) {
+        if bbox { std::cout << '|'; }
+
+        for col do (in alive) {
+            if alive {
+                std::cout << "[]";
+                num_alive++;
+            }
+            else {
+                std::cout << "  ";
+            }
+        }
+
+        if bbox { std::cout << '|' << '\n'; }
+    }
+
+    if bbox {
+        for 0..<(2*WIDTH)+2 do (_) { std::cout << '-'; }
+        std::cout << '\n';
+    }
+
+    std::cout << "alive: (num_alive)$";
+}
+
+
+countAliveNeighbours: (in b: std::vector<std::vector<bool>>, in i: i8, in j: i8) -> i8 = {
+
+    alive := 0;
+
+    minX: u8 = 0;
+    maxX: u8 = WIDTH - 1;
+    minY: u8 = 0;
+    maxY: u8 = HEIGHT - 1;
+
+    if i > 0 { minX = i - 1; }
+    if i < WIDTH - 1 { maxX = i + 1; }
+
+    if j > 0 { minY = j - 1; }
+    if j < HEIGHT - 1 { maxY = j + 1; }
+
+    for minX..=maxX do (x) {
+        for minY..=maxY do (y) {
+            if (x == i) && (y == j) { continue; }
+            if b[x][y] { alive++; }
+        }
+    }
+
+    return alive;
+}
+
+
+nextGeneration: (in b: std::vector<std::vector<bool>>) -> std::vector<std::vector<bool>> = {
+    nu_board: std::vector<std::vector<bool>> = ();
+    nu_board.reserve(WIDTH);
+
+    i := 0;
+    j := 0;
+
+    for b next i++ do (in col) {
+        _ = nu_board.emplace_back(std::vector<bool>());
+        nu_board[i].reserve(HEIGHT);
+        j = 0;
+
+        for col next j++ do (in val) {
+            count := countAliveNeighbours(b, i, j);
+
+            // rules
+            if (count < 2) || (count > 3) {  // underpopulation/overpopulation
+                _ = nu_board[i].emplace_back(false);
+            }
+            else if (!b[i][j]) && (count == 3) {  // reproduction
+                _ = nu_board[i].emplace_back(true);
+            }
+            else { _ = nu_board[i].emplace_back(b[i][j]); }
+
+        }
+    }
+
+    return nu_board;
+}
+
+
+
+main: () = {
+    board: std::vector<std::vector<bool>> = (WIDTH, std::vector<bool>(HEIGHT));
+    board[4][3] = true;
+    board[4][4] = true;
+    board[4][5] = true;
+
+    gen: u32 = 0;
+
+    while true next std::this_thread::sleep_for(std::chrono::milliseconds(500)) {
+        print_board(board);
+        std::cout << "; generation: (gen)$\n";
+
+        board = nextGeneration(board);
+
+        gen++;
+    }
+}
